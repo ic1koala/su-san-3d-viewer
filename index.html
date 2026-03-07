@@ -3,84 +3,363 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>すーさん 360° Viewer</title>
+    <title>瞬間英作文 - 初心者向け</title>
     <style>
+        /* パステルカラー＆スマホ向けベースデザイン */
+        :root {
+            --bg-color: #FFF5E4; /* 淡いクリーム色 */
+            --text-color: #5D576B; /* 柔らかいダークグレー */
+            --primary-color: #FFC4C4; /* パステルピンク */
+            --secondary-color: #FFE3E1; /* さらに淡いピンク */
+            --accent-color: #A3E4D7; /* パステルミント（プログレスバー用） */
+            --danger-color: #F5B7B1; /* 間違い用 */
+        }
+
         body {
             margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
-            background-color: #f7f3ee;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            touch-action: none; /* スワイプ時のスクロールを防止 */
+            min-height: 100vh;
         }
-        h1 { color: #5d5d5d; margin-bottom: 20px; }
-        
-        /* 画像を表示する窓 */
-        #viewer {
-            width: 250px;
-            height: 400px;
-            border: 8px solid #fff;
-            border-radius: 30px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            background-image: url('image.jpeg'); /* フォルダ内の画像名 */
-            background-size: 500px 800px; /* 画像の並び(2x2)に合わせて調整 */
-            background-repeat: no-repeat;
-            cursor: grab;
+
+        /* アプリのコンテナ（スマホ幅に最適化） */
+        #app-container {
+            width: 100%;
+            max-width: 480px; /* スマホサイズの上限 */
+            background-color: #ffffff;
+            min-height: 100vh;
+            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+            position: relative;
+            padding-top: 60px; /* ヘッダーの余白 */
         }
-        #viewer:active { cursor: grabbing; }
-        .instructions { margin-top: 20px; color: #888; font-size: 0.9em; }
+
+        /* ヘッダー＆中央ホームボタン */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            max-width: 480px;
+            height: 60px;
+            background-color: #ffffff;
+            border-bottom: 2px solid var(--secondary-color);
+            display: flex;
+            justify-content: center; /* 中央寄せ */
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .home-btn {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-color);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* 各画面の共通設定 */
+        .screen {
+            display: none; /* デフォルトは非表示 */
+            padding: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .screen.active {
+            display: block; /* activeクラスで表示 */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1, h2, h3 {
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        p {
+            line-height: 1.6;
+        }
+
+        /* ボタンデザイン */
+        .btn {
+            display: block;
+            width: 100%;
+            background-color: var(--secondary-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: left;
+        }
+        .btn:hover, .btn:active {
+            background-color: var(--primary-color);
+        }
+        .btn-center {
+            text-align: center;
+            background-color: var(--primary-color);
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        /* プログレスバー */
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background-color: #eee;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* フィードバック表示（正解・不正解） */
+        #feedback {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            height: 30px;
+            margin-bottom: 10px;
+        }
+        .correct { color: #2E86C1; }
+        .incorrect { color: #E74C3C; }
+
+        /* ステータス画面のリスト */
+        .mistake-item {
+            background-color: var(--bg-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 5px solid var(--danger-color);
+        }
+        .mistake-ja { font-weight: bold; margin-bottom: 5px; }
+        .mistake-en { color: #E74C3C; }
     </style>
 </head>
 <body>
 
-    <h1>Su-san Viewer</h1>
-    
-    <div id="viewer"></div>
-    
-    <p class="instructions">左右にドラッグして「すーさん」を回せます</p>
+<div id="app-container">
+    <header>
+        <button class="home-btn" onclick="showScreen('home-screen')">🏠 ホーム</button>
+    </header>
 
-    <script>
-        const viewer = document.getElementById('viewer');
-        let isDragging = false;
-        let startX = 0;
-        let currentPos = 0;
+    <div id="home-screen" class="screen active">
+        <h1>瞬間英作文アプリ🌸</h1>
+        <p style="text-align: center;">中学レベルの英語から、<br>パッと英語が出てくるトレーニング！</p>
+        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=English&backgroundColor=FFE3E1" alt="キャラクター" style="width:120px; display:block; margin: 20px auto; border-radius: 50%;">
+        
+        <button class="btn btn-center" onclick="showScreen('lesson-screen')">▶️ レッスンを始める</button>
+        <button class="btn btn-center" style="background-color: var(--bg-color);" onclick="showStatus()">📊 間違えた問題を確認 (Status)</button>
+    </div>
 
-        // 画像内の各向きの座標 (2x2の配置を想定)
-        // [正面, 背面, 左側面, 右側面(左の反転想定)]
-        const positions = [
-            '0px 0px',      // 正面（上段左）
-            '-250px 0px',   // 背面（上段右）
-            '0px -400px',   // 正面（下段左）※予備
-            '-250px -400px' // 左側面（下段右）
-        ];
+    <div id="lesson-screen" class="screen">
+        <h2>📚 今日の型：Be動詞</h2>
+        <div style="background-color: var(--bg-color); padding: 15px; border-radius: 10px;">
+            <p><strong>Be動詞 (am, is, are)</strong> は「〜です」「〜にいる」という状態や存在を表します。</p>
+            <ul>
+                <li>I <b>am</b> ~ (私は〜です)</li>
+                <li>He/She/It <b>is</b> ~ (彼/彼女/それは〜です)</li>
+                <li>You/We/They <b>are</b> ~ (あなた/私たち/彼らは〜です)</li>
+            </ul>
+        </div>
+        <button class="btn btn-center" onclick="startQuiz()">問題へ進む 🚀</button>
+    </div>
 
-        let index = 0;
+    <div id="quiz-screen" class="screen">
+        <div class="progress-container">
+            <div id="progress" class="progress-bar"></div>
+        </div>
+        <p id="question-count" style="text-align: right; margin-top: 0; font-size: 14px;">1 / 10</p>
+        
+        <h2 id="question-text" style="margin-bottom: 30px;">問題がここに出ます</h2>
+        
+        <div id="feedback"></div>
 
-        function updateRotation(deltaX) {
-            // 移動量に合わせて表示する画像（位置）を切り替える
-            if (Math.abs(deltaX) > 50) {
-                index = (index + (deltaX > 0 ? 1 : -1) + positions.length) % positions.length;
-                viewer.style.backgroundPosition = positions[index];
-                startX += deltaX; // 起点を更新して連続回転させる
-            }
+        <div id="options-container">
+            </div>
+    </div>
+
+    <div id="result-screen" class="screen">
+        <h2>🎉 お疲れ様でした！</h2>
+        <h1 id="score-text" style="font-size: 48px; color: var(--accent-color);">8/10</h1>
+        <p style="text-align: center;">1セット完了です。</p>
+        <button class="btn btn-center" onclick="showScreen('home-screen')">ホームに戻る</button>
+        <button class="btn btn-center" style="background-color: var(--bg-color);" onclick="showStatus()">間違えた問題を確認</button>
+    </div>
+
+    <div id="status-screen" class="screen">
+        <h2>📊 復習リスト</h2>
+        <p style="font-size: 14px; text-align: center;">過去に間違えた問題の正答ログです。</p>
+        <div id="mistakes-container">
+            </div>
+        <button class="btn btn-center" style="background-color: #eee; border-color: #ccc; margin-top: 30px;" onclick="clearMistakes()">ログをリセットする</button>
+    </div>
+</div>
+
+<script>
+    // --- データ定義 (1セット10問) ---
+    const quizData = [
+        { ja: "私は学生です。", options: ["I am a student.", "I is a student.", "I are a student.", "I be a student."], answer: 0 },
+        { ja: "彼は忙しいです。", options: ["He are busy.", "He am busy.", "He is busy.", "He be busy."], answer: 2 },
+        { ja: "彼女は東京にいます。", options: ["She is in Tokyo.", "She am in Tokyo.", "She are in Tokyo.", "She in Tokyo."], answer: 0 },
+        { ja: "私たちは幸せです。", options: ["We is happy.", "We am happy.", "We are happy.", "We be happy."], answer: 2 },
+        { ja: "それは私の本です。", options: ["That am my book.", "That is my book.", "That are my book.", "That my book."], answer: 1 },
+        { ja: "あなたは親切ですね。", options: ["You are kind.", "You is kind.", "You am kind.", "You be kind."], answer: 0 },
+        { ja: "このお茶は熱いです。", options: ["This tea are hot.", "This tea am hot.", "This tea is hot.", "This tea hot."], answer: 2 },
+        { ja: "私は眠くありません。", options: ["I is not sleepy.", "I are not sleepy.", "I am not sleepy.", "I not sleepy."], answer: 2 },
+        { ja: "彼は医者ですか？", options: ["Are he a doctor?", "Is he a doctor?", "Am he a doctor?", "Be he a doctor?"], answer: 1 },
+        { ja: "彼らは公園にいます。", options: ["They is in the park.", "They am in the park.", "They are in the park.", "They be in the park."], answer: 2 }
+    ];
+
+    // --- 状態管理変数 ---
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let isAnswering = false;
+
+    // --- 画面切り替え関数 ---
+    function showScreen(screenId) {
+        // すべての画面を隠す
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        // 指定された画面だけ表示
+        document.getElementById(screenId).classList.add('active');
+        window.scrollTo(0, 0); // 上までスクロール
+    }
+
+    // --- クイズ開始 ---
+    function startQuiz() {
+        currentQuestionIndex = 0;
+        score = 0;
+        showScreen('quiz-screen');
+        loadQuestion();
+    }
+
+    // --- 問題の読み込み ---
+    function loadQuestion() {
+        isAnswering = false;
+        document.getElementById('feedback').innerText = "";
+        
+        const q = quizData[currentQuestionIndex];
+        document.getElementById('question-text').innerText = q.ja;
+        
+        // プログレスバーと問題数の更新
+        const progressPercent = (currentQuestionIndex / quizData.length) * 100;
+        document.getElementById('progress').style.width = progressPercent + '%';
+        document.getElementById('question-count').innerText = `${currentQuestionIndex + 1} / ${quizData.length}`;
+
+        // 選択肢の生成
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = ""; // クリア
+        
+        q.options.forEach((optionText, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.innerText = optionText;
+            btn.onclick = () => checkAnswer(index, btn);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    // --- 答え合わせ ---
+    function checkAnswer(selectedIndex, btnElement) {
+        if (isAnswering) return; // 連打防止
+        isAnswering = true;
+
+        const q = quizData[currentQuestionIndex];
+        const feedbackEl = document.getElementById('feedback');
+
+        if (selectedIndex === q.answer) {
+            // 正解
+            btnElement.style.backgroundColor = '#A3E4D7'; // ミントグリーン
+            feedbackEl.innerText = "⭕️ 正解！";
+            feedbackEl.className = "correct";
+            score++;
+        } else {
+            // 不正解
+            btnElement.style.backgroundColor = '#F5B7B1'; // 赤系
+            feedbackEl.innerText = "❌ 残念...";
+            feedbackEl.className = "incorrect";
+            // 正解のボタンを緑にする
+            document.getElementById('options-container').children[q.answer].style.backgroundColor = '#A3E4D7';
+            
+            // 間違いをローカルストレージに保存
+            saveMistake(q.ja, q.options[q.answer]);
         }
 
-        // マウス・タッチイベントの登録
-        viewer.addEventListener('mousedown', (e) => { isDragging = true; startX = e.pageX; });
-        window.addEventListener('mouseup', () => { isDragging = false; });
-        window.addEventListener('mousemove', (e) => {
-            if (isDragging) updateRotation(e.pageX - startX);
-        });
+        // 1秒後に次の問題へ
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }, 1200);
+    }
 
-        // スマホ用タッチイベント
-        viewer.addEventListener('touchstart', (e) => { isDragging = true; startX = e.touches[0].pageX; });
-        window.addEventListener('touchend', () => { isDragging = false; });
-        window.addEventListener('touchmove', (e) => {
-            if (isDragging) updateRotation(e.touches[0].pageX - startX);
-        });
-    </script>
+    // --- 結果画面の表示 ---
+    function showResult() {
+        // プログレスバーを100%にする
+        document.getElementById('progress').style.width = '100%';
+        document.getElementById('score-text').innerText = `${score} / ${quizData.length}`;
+        showScreen('result-screen');
+    }
+
+    // --- ログの保存 (Local Storageを使用) ---
+    function saveMistake(ja, correctEn) {
+        let mistakes = JSON.parse(localStorage.getItem('englishMistakes')) || [];
+        // 重複チェック（すでに同じ問題があれば追加しない）
+        const exists = mistakes.find(m => m.ja === ja);
+        if (!exists) {
+            mistakes.push({ ja: ja, en: correctEn });
+            localStorage.setItem('englishMistakes', JSON.stringify(mistakes));
+        }
+    }
+
+    // --- ステータス画面の表示 ---
+    function showStatus() {
+        const container = document.getElementById('mistakes-container');
+        container.innerHTML = "";
+        
+        let mistakes = JSON.parse(localStorage.getItem('englishMistakes')) || [];
+
+        if (mistakes.length === 0) {
+            container.innerHTML = "<p style='text-align:center; color:#888;'>記録された間違いはありません。素晴らしいです！</p>";
+        } else {
+            mistakes.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'mistake-item';
+                div.innerHTML = `<div class="mistake-ja">Q. ${m.ja}</div><div class="mistake-en">A. ${m.en}</div>`;
+                container.appendChild(div);
+            });
+        }
+        showScreen('status-screen');
+    }
+
+    // --- ログのリセット ---
+    function clearMistakes() {
+        if(confirm("間違えた問題の記録をすべて削除しますか？")) {
+            localStorage.removeItem('englishMistakes');
+            showStatus(); // 画面更新
+        }
+    }
+</script>
+
 </body>
 </html>
